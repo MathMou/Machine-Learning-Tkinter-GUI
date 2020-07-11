@@ -67,7 +67,7 @@ def Credits():
 ━━━━━━•❍•°•❍•°•❍•━━━━━━
 Goodbye & have a nice day!
 
-CREATED BY Mathias M. Pedersen     
+CREATED BY MathMou     
  ━━━━━•❍•°•❍•°•❍•━━━━━━
              ''')
     app.destroy()
