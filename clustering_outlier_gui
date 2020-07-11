@@ -1,0 +1,565 @@
+'''
+
+┏━━━━•❍•°•❍•°•❍•━━━━┓
+❍           INTRO           ❍
+┗━━━━•❍•°•❍•°•❍•━━━━┛
+
+
+This GUI is a work in progress. 
+The basic idea is to create a functionel, streamlined and rudimentary Machine Learning GUI to educate on ML principals 
+and make available some of the more basic tools for others who are not familiar with ML and programming.
+
+'''
+
+
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog
+from tkinter.filedialog import askopenfilename
+from tkinter.messagebox import showinfo, showwarning, askquestion
+from tkinter import OptionMenu
+from tkinter import StringVar
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+import sklearn.cluster as cluster
+import scipy.spatial.distance as sdist
+from sklearn.ensemble import IsolationForest
+
+import pandas as pd
+import numpy as np
+import seaborn as sn
+
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+
+RANDOM_STATE = 42 #used to help randomly select the data points
+LARGE_FONT = ("Verdana", 12)
+low_memory=False
+
+df = None
+df_nan = None
+df_r = None
+check_transformer = None
+df_output = None
+
+#f = Figure(figsize=(5,5), dpi=100)
+#a = f.add_subplot(111)
+
+'''
+
+┏━━━━•❍•°•❍•°•❍•━━━━┓
+❍          FUNCTIONS        ❍
+┗━━━━•❍•°•❍•°•❍•━━━━┛
+
+
+'''
+
+
+
+def Credits():
+    showinfo("INFO", 
+             '''
+━━━━━━•❍•°•❍•°•❍•━━━━━━
+Goodbye & have a nice day!
+
+CREATED BY Mathias M. Pedersen     
+ ━━━━━•❍•°•❍•°•❍•━━━━━━
+             ''')
+    app.destroy()
+    
+def RunUC():
+    showwarning("Warning", "Under construction")
+
+def open_file():
+    global df, df_nan, df_r, df_output, best_n_clusters
+    
+    df = None
+    df_nan = None
+    df_r = None
+    check_transformer = None
+    df_output = None
+    ClusterNum = None
+    C_Number = None
+    name = askopenfilename()
+
+    if name:
+        df = pd.read_excel(name, sep=';')
+        showinfo("INFO", "DataFrame created")
+
+def Resetter():
+    global df, df_nan, df_r, df_output, ClusterNum, check_transformer
+    
+    df = None
+    df_nan = None
+    df_r = None
+    check_transformer = None
+    df_output = None
+    ClusterNum = None
+    showinfo("INFO", "Dataframe reset")        
+        
+def NaNifier():
+    global df, df_nan
+    
+    df_nan = None
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    else:
+        df_nan = df
+        df_nan.replace(np.nan, 0, inplace=True)
+        showinfo("INFO", "Blank values replaced by zero values")
+        
+def data_remover():
+    global df_nan, df_r
+    
+    if df is None:
+        #print("Read file first")
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        #print("Read file first")
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is not None:
+        showwarning("Warning", "Data already cleaned")
+    else:
+        for y in df_nan.columns:
+            if df_nan[y].dtype != np.float64:
+                df_r = df_nan.select_dtypes(include=['float64', 'int64'])
+                
+            elif df_nan[y].dtype != np.int64:
+                df_r = df_nan.select_dtypes(include=['float64', 'int64'])
+                
+            else:
+                df_r = df_nan
+                
+        showinfo("INFO", "Data cleaned")
+
+def MM_data_transformer():
+    
+    global df, df_nan, df_r, check_transformer
+    
+    MM_scaler = MinMaxScaler()
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("Warning", "Clean data first")
+    elif check_transformer is not None:
+        showwarning("Warning", "Data already transformed")
+    else:
+        check_transformer = 1337 # Check to see if data is transformed
+        df_r = df_r.astype(float)
+        df_r = pd.DataFrame(MM_scaler.fit_transform(df_r),columns = df_r.columns) #Scaling data
+        df_r = df_r.round(2) #Rounding data
+        print(df_r)
+        showinfo("INFO", "Data scaled")
+
+def S_data_transformer():
+    
+    global df, df_nan, df_r, check_transformer
+    
+    S_scaler = StandardScaler()
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("Warning", "Clean data first")
+    elif check_transformer is not None:
+        showwarning("Warning", "Data already transformed")
+    else:
+        check_transformer = 1337 # Check to see if data is transformed
+        df_r = df_r.astype(float)
+        df_r = pd.DataFrame(S_scaler.fit_transform(df_r),columns = df_r.columns) #Scaling data
+        df_r = df_r.round(2) #Rounding data
+        print(df_r)
+        showinfo("INFO", "Data scaled")
+
+def RunSilHou():
+    #Silhouette Score for further clustering
+    global df, df_nan, df_r, df_output, ClusterNum
+    
+    ClusterNum = None
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("WARNING", "Clean file first")
+    elif df_output is not None:
+        showwarning("WARNING", "Already computed KMeans")
+    else:
+        n_samples, n_features = df_r.shape
+        procent_samples = n_samples
+        #procent_samples = n_samples*0.10 #10% of the dataset for sample_size
+        procent_samples = int(procent_samples)
+
+        sil_score_max = -1 #this is the minimum possible score
+
+        for n_clusters in range(2,10):
+          model = KMeans(n_clusters = n_clusters, n_jobs = 8, init='k-means++', max_iter=100, n_init=1)
+          labels = model.fit_predict(df_r)
+          sil_score = silhouette_score(df_r, labels, sample_size = procent_samples, random_state = RANDOM_STATE)
+          print("The average silhouette score for %i clusters is %0.10f" %(n_clusters, sil_score))
+          if sil_score > sil_score_max:
+            sil_score_max = sil_score
+            ClusterNum = n_clusters
+            Cluster_text = "Silhouette Score calculated %i clusters" %(ClusterNum)
+        showinfo(title="Results", message=Cluster_text)
+        
+def RunKM_clustering():
+
+    global df, df_nan, df_r, df_output, ClusterNum
+
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("WARNING", "Clean file first")
+    elif df_output is not None:
+        showwarning("WARNING", "Already computed KMeans")
+    else:       
+        df_output = df
+        kmeans = cluster.KMeans(n_jobs = 8, n_clusters = ClusterNum, init = 'k-means++', random_state = RANDOM_STATE).fit(df_r)
+
+        centroids = kmeans.cluster_centers_
+        dists = pd.DataFrame(
+            sdist.cdist(df_r, centroids), 
+            columns=['dist_{}'.format(i) for i in range(len(centroids))],
+            index=df_output.index)
+        df_output = pd.concat([df_r, dists], axis=1)
+        
+        df_output['cluster_number'] = kmeans.labels_
+        
+        df_output_columns = df_output.filter(regex=('dist_')).columns
+
+        df_output['dists'] = df_output[df_output_columns].min(axis=1)
+
+        df_output = df_output[df_output.columns.drop(list(df_output.filter(regex='dist_')))]
+
+        showinfo("INFO", "KMeans clusters Calculated")
+
+def RunKM_outlier():
+
+    global df, df_nan, df_r, df_output
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("WARNING", "Clean file first")
+    elif df_output is not None:
+        kmeans_one = cluster.KMeans(n_jobs = 8, n_clusters = 1, init = 'k-means++', random_state = RANDOM_STATE).fit(df_r)
+
+        centroids = kmeans_one.cluster_centers_
+        dist = pd.DataFrame(
+            sdist.cdist(df_r, centroids), 
+            columns=['dist_clust_outlier'.format(i) for i in range(len(centroids))],
+            index=df_output.index)
+        df_output = pd.concat([df_output, dist], axis=1)
+    else:    
+        df_output = df
+        kmeans_one = cluster.KMeans(n_jobs = 8, n_clusters = 1, init = 'k-means++', random_state = RANDOM_STATE).fit(df_r)
+
+        centroids = kmeans_one.cluster_centers_
+        dist = pd.DataFrame(
+            sdist.cdist(df_r, centroids), 
+            columns=['dist_clust_outlier'.format(i) for i in range(len(centroids))],
+            index=df_output.index)
+        df_output = pd.concat([df_output, dist], axis=1)
+
+def RunIsoForest():
+    
+    global df, df_nan, df_r, df_output, ContNum
+    
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("WARNING", "Clean file first")
+    elif ContNum is None:
+        showwarning('Warning', "Define Contamination Value")
+    elif df_output is not None:
+        iso_columns = df_r.columns
+        clf = IsolationForest(max_samples="auto", n_jobs=-1, random_state=RANDOM_STATE, behaviour="new", contamination=ContNum)
+
+        clf.fit(df_r[iso_columns])
+
+        iso_pred = clf.predict(df_r[iso_columns])
+
+        df_output['isolation_class'] = iso_pred
+        showinfo("INFO", "IsolationForest Calculated")
+    else:  
+        df_output = df
+        
+        iso_columns = df_r.columns
+        clf = IsolationForest(max_samples="auto", n_jobs=-1, random_state=RANDOM_STATE, behaviour="new", contamination=ContNum)
+
+        clf.fit(df_r[iso_columns])
+
+        iso_pred = clf.predict(df_r[iso_columns])
+
+        df_output['isolation_class'] = iso_pred
+        showinfo("INFO", "IsolationForest Calculated")
+
+def save_in_new_file():
+
+    global df, df_nan, df_r, df_output
+
+    if df is None:
+        showwarning("Warning", "Read file first")
+    elif df_nan is None:
+        showwarning("Warning", "Replace blank values first")
+    elif df_r is None:
+        showwarning("WARNING", "Clean file first")
+    elif df_output is None:
+        showwarning("WARNING", "Compute file first")
+    else:
+        df_output.to_csv("output.csv", sep=';', index=0, mode='w')
+        showinfo("INFO", "DataFrame saved")
+
+def ClusterDefinition():
+    
+    global ClusterNum
+    
+    ClusterNum = Clus_Number.get()
+    ClusterNum = int(ClusterNum)
+    print(ClusterNum)
+    Cluster_text = "KMeans clustering set to %i clusters" %(ClusterNum)
+    showinfo(title="Results", message=Cluster_text)
+
+def ContaminationDefinition():
+    
+    global ContNum
+    
+    ContNum = Cont_Number.get()
+    ContNum = int(ContNum)
+    ContNum = ContNum/100 # to return integer to 0.0X state
+    print(ContNum)
+    Contamination_text = "Contamination value set to %0.2f" %(ContNum)
+    showinfo(title="Results", message=Contamination_text)
+        
+#Make popout window??
+#https://pythonprogramming.net/tkinter-popup-message-window/
+'''
+def popupmsg(msg):
+    popup = tk.Tk()
+    popup.wm_title("!")
+    label = ttk.Label(popup, text=msg, font=NORM_FONT)
+    label.pack(side="top", fill="x", pady=10)
+    B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
+    B1.pack()
+    popup.mainloop()
+'''        
+
+
+'''
+
+┏━━━━•❍•°•❍•°•❍•━━━━┓
+❍       TKINTER PAGES       ❍
+┗━━━━•❍•°•❍•°•❍•━━━━┛
+
+
+'''
+
+
+
+class MLapp(tk.Tk):
+
+    def __init__(self, *args, **kwargs):
+        
+        tk.Tk.__init__(self, *args, **kwargs)
+        
+        #tk.Tk.iconbitmap(self, default="iconimage_kmeans.ico") #Icon for program
+        tk.Tk.wm_title(self, "ML advanched analytics")
+        
+        container = tk.Frame(self)
+        container.pack(side="top", fill="both", expand = True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        menubar = tk.Menu(container)
+        filemenu_file = tk.Menu(menubar, tearoff=0)
+        filemenu_file.add_command(label="Open", command=open_file)
+        filemenu_file.add_command(label="Save", command=save_in_new_file)
+        filemenu_file.add_separator()
+        filemenu_file.add_command(label="Exit", command=Credits)
+        menubar.add_cascade(label="File", menu=filemenu_file)
+        
+        filemenu_edit = tk.Menu(menubar, tearoff=0)
+        submenu_t = tk.Menu(container, tearoff=0)
+        submenu_s = tk.Menu(container, tearoff=0)
+        submenu_t.add_command(label="Blank values", command=NaNifier)
+        submenu_t.add_command(label="Non-numeric values", command=data_remover)
+        submenu_s.add_command(label="MinMax scaler", command=MM_data_transformer)
+        submenu_s.add_command(label="Standard scaler", command=S_data_transformer)
+        filemenu_edit.add_cascade(label='Data transformating', menu=submenu_t, underline=0)
+        filemenu_edit.add_cascade(label='Data scaling', menu=submenu_s, underline=0)
+        filemenu_edit.add_separator()
+        filemenu_edit.add_command(label="Clear dataframe", command=Resetter)
+        menubar.add_cascade(label="Edit", menu=filemenu_edit)    
+        
+        filemenu_help = tk.Menu(menubar, tearoff=0)
+        filemenu_help.add_command(label="Function descriptions", command=RunUC) # Make help txt. file
+        filemenu_help.add_command(label="Data cleaning steps", command=RunUC)
+        menubar.add_cascade(label="Help", menu=filemenu_help)
+        
+        tk.Tk.config(self, menu=menubar)
+        
+        self.frames = {} 
+        
+        for F in (StartPage, PageCluster, PageOutlier, PageElbow):
+
+            frame = F(container, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(StartPage)
+
+    def show_frame(self, cont):
+
+        frame = self.frames[cont]
+        frame.tkraise()
+        
+class StartPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text=
+                         "Machine Learning \nadvanched analytics", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
+        
+        button1 = ttk.Button(self, text="Clustering", 
+                            command=lambda: controller.show_frame(PageCluster))
+        button1.pack(fill='x')
+        
+        button2 = ttk.Button(self, text="Outlier Detection", 
+                            command=lambda: controller.show_frame(PageOutlier))
+        button2.pack(fill='x')
+
+class PageCluster(tk.Frame):    
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Clustering", font=LARGE_FONT)
+        label.pack(pady=10, padx=10) 
+        
+        button1 = ttk.Button(self, text='Run Silhouette Score Calculation', command=RunSilHou)
+        button1.pack(fill='x')
+        
+        button2 = ttk.Button(self, text="Elbow Method Calculation",
+                           command=lambda: controller.show_frame(PageElbow))
+        button2.pack(fill='x')
+        
+        button3 = ttk.Button(self, text='Run KMeans', command=RunKM_clustering)
+        button3.pack(fill='x')
+        
+        button4 = ttk.Button(self, text="Back",
+                           command=lambda: controller.show_frame(StartPage))
+        button4.pack(fill='x')    
+        
+class PageElbow(tk.Frame):    
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Elbow Method", font=LARGE_FONT)
+        label.pack(pady=10, padx=10) 
+        
+        global ClusterNum, C_Number
+
+        def RunElbowMethod():
+            f = None
+            f = plt.figure(figsize=(10, 8))
+            wcss = []
+            for i in range(1, 11):
+                kmeans = KMeans(n_clusters = i, init = 'k-means++', random_state = RANDOM_STATE)
+                kmeans.fit(df)
+                wcss.append(kmeans.inertia_)
+            plt.plot(range(1, 11), wcss)
+            plt.title('The Elbow Method')
+            plt.xlabel('Number of clusters')
+            plt.ylabel('WCSS')
+            plt.draw()
+          
+            canvas = FigureCanvasTkAgg(f, self)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+            toolbar = NavigationToolbar2Tk(canvas, self)
+            toolbar.update()
+            canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        ClusterOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        Clus_Number = StringVar(self)
+        Clus_Number.set(ClusterOptions[0]) # default value
+
+        button1 = ttk.Button(self, text="Run Elbow Method", command=RunElbowMethod)
+        button1.pack(fill='x')
+        
+        dropdown1 = tk.OptionMenu(self, Clus_Number, *ClusterOptions)
+        dropdown1.pack()
+            
+        button2 = ttk.Button(self, text="Define Number of Clusters", command=ClusterDefinition)
+        button2.pack(fill='x')
+        
+        button3 = ttk.Button(self, text="Back",
+                           command=lambda: controller.show_frame(PageCluster))
+        button3.pack(fill='x')
+        
+        
+class PageOutlier(tk.Frame):    
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Outlier Detection", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)            
+        
+        global ContNum, Cont_Number
+        
+        ContOptions = np.arange(1, 100, 1)
+        Cont_Number = StringVar(self)
+        Cont_Number.set(ContOptions[0]) # default value
+        
+        dropdown1 = tk.OptionMenu(self, Cont_Number, *ContOptions)
+        dropdown1.pack()
+            
+        button2 = ttk.Button(self, text="Define Contamination Value (0.X Decimals)", command=ContaminationDefinition)
+        button2.pack(fill='x')
+        
+        button3 = ttk.Button(self, text='Run IsolationForest Outlier Detection', command=RunIsoForest)
+        button3.pack(fill='x')
+        
+        button4 = ttk.Button(self, text="Back",
+                           command=lambda: controller.show_frame(StartPage))
+        button4.pack(fill='x')
+        
+
+app = MLapp()
+app.geometry('500x400')
+app.mainloop()
+#app.destroy()
+
+
+'''
+
+┏━━━━•❍•°•❍•°•❍•━━━━┓
+❍          Credits          ❍
+┗━━━━•❍•°•❍•°•❍•━━━━┛
+
+A lot of inspiration for the being able to change pages came from Sentdex;
+https://pythonprogramming.net/plotting-live-bitcoin-price-data-tkinter-matplotlib/
+
+'''
