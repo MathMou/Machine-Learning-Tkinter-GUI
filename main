@@ -345,8 +345,6 @@ def ContaminationDefinition():
     Contamination_text = "Contamination value set to %0.2f" %(ContNum)
     showinfo(title="Results", message=Contamination_text)
         
-#Make popout window??
-#https://pythonprogramming.net/tkinter-popup-message-window/
 '''
 def popupmsg(msg):
     popup = tk.Tk()
