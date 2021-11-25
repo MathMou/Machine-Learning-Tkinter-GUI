@@ -4,11 +4,6 @@
 ❍           INTRO           ❍
 ┗━━━━•❍•°•❍•°•❍•━━━━┛
 
-
-This GUI is a work in progress. 
-The basic idea is to create a functionel, streamlined and rudimentary Machine Learning GUI to educate on ML principals 
-and make available some of the more basic tools for others who are not familiar with ML and programming.
-
 '''
 
 
@@ -558,8 +553,5 @@ app.mainloop()
 ┏━━━━•❍•°•❍•°•❍•━━━━┓
 ❍          Credits          ❍
 ┗━━━━•❍•°•❍•°•❍•━━━━┛
-
-A lot of inspiration for the being able to change pages came from Sentdex;
-https://pythonprogramming.net/plotting-live-bitcoin-price-data-tkinter-matplotlib/
 
 '''
