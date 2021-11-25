@@ -942,9 +942,6 @@ class PlottingDFPage(tk.Frame):
         button2 = ttk.Button(self, text="Back",
                            command=lambda: controller.show_frame(StartPage))
         button2.pack(fill='x') 
-
-# PLots:
-#https://medium.com/analytics-vidhya/love-the-ocean-love-seaborn-2e8737bef728
         
 app = Analyticsapp()
 app.geometry('500x400')
