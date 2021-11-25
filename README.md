@@ -1,7 +1,8 @@
 # ML-Tkinter
 A small program in Python TKinter containing various Machine Learning utilities.
 
-Although functional -this GUI is still a work in progress. It works, but some of the features is still missing.
+Although functional -this GUI is still a work in progress and some of the features is still missing.
+
 The basic idea is to create a functionel, streamlined and rudimentary Machine Learning GUI to educate on ML principals 
 and make available some of the more basic tools for others who are not familiar with ML and programming.
 
